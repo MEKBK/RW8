@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+	http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+    <!-- 自动扫描
+在指定包下，若某类带有特定注解，@Component、@Repository、@Service、@Controller,
+则会将这个对象作为Bean注册到Spring容器中。   -->
+    <context:component-scan base-package="com.kbk"/>
+    <!-- 加载db.properties -->
+    <context:property-placeholder location="classpath:db.properties" ignore-unresolvable="true"/>
+    <!-- 加载TenXun.properties -->
+    <context:property-placeholder location="classpath:TenXun.properties" file-encoding="UTF-8" ignore-unresolvable="true"/>
+    <!-- 加载AliBaBa.properties -->
+    <context:property-placeholder location="classpath:AliBaBa.properties" file-encoding="UTF-8" ignore-unresolvable="true"/>
+    <!-- 开启注解 -->
+    <context:annotation-config/>
+    <!-- 加载redis.xml -->
+    <import resource="classpath:redis.xml"/>
+
+
+
+    <!-- 配置数据源 -->
+    <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource"
+          init-method="init" destroy-method="close">
+        <property name="driverClassName" value="${druid.driverClassName}" />
+        <property name="url" value="${druid.url}" />
+        <property name="username" value="${druid.username}" />
+        <property name="password" value="${druid.password}" />
+        <property name="maxActive" value="${druid.maxActive}" />
+        <property name="maxWait" value="${druid.maxWait}" />
+        <!-- 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒 -->
+        <property name="timeBetweenEvictionRunsMillis" value="${druid.timeBetweenEvictionRunsMillis}" />
+
+        <!-- 配置一个连接在池中最小生存的时间，单位是毫秒 -->
+        <property name="minEvictableIdleTimeMillis" value="${druid.minEvictableIdleTimeMillis}" />
+        <property name="validationQuery" value="${druid.validationQuery}" />
+        <property name="testWhileIdle" value="${druid.testWhileIdle}" />
+        <property name="testOnBorrow" value="${druid.testOnBorrow}" />
+        <property name="testOnReturn" value="${druid.testOnReturn}" />
+
+        <!-- 打开PSCache，并且指定每个连接上PSCache的大小 如果用Oracle，则把poolPreparedStatements配置为true，mysql可以配置为false。 -->
+        <property name="poolPreparedStatements" value="${druid.poolPreparedStatements}" />
+        <property name="maxPoolPreparedStatementPerConnectionSize"
+                  value="${druid.maxPoolPreparedStatementPerConnectionSize}" />
+
+        <!-- 配置监控统计拦截的filters -->
+        <property name="filters" value="${druid.filters}" />
+    </bean>
+
+    <!-- 配置SqlSessionFacotory -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!-- 加载mybatis的配置文件（如果配置文件中没有配置项，可以忽略该文件） -->
+<!--        <property name="configLocation" value="" />-->
+
+        <property name="typeAliasesPackage" value="com.kbk.model"/>
+        <!-- 配置数据源 -->
+        <property name="dataSource" ref="dataSource" />
+        <property name="mapperLocations" value="classpath:mapping/*"/>
+    </bean>
+
+    <!--    开启自动扫描Mapper,从mapper包中扫描mapper接口，自动创建代理对象并在spring容器中注册。-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.kbk.dao"/>
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+    </bean>
+
+    <!--配置事务管理器-->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+
+    <!-- 服务端 -->
+    <bean id="UserServiceImpl" class="com.kbk.service.Impl.UserServiceImpl"></bean>
+
+    <!-- 使用RmiServiceExporter将RMIServiceImpl的对象导出为RMI服务对象 -->
+    <bean class="org.springframework.remoting.rmi.RmiServiceExporter">
+        <!--服务的接口类型-->
+        <property name="serviceInterface" value="com.kbk.service.UserService"/>
+        <!--对外的名称，即客户端访问时用这个名字找到这个服务-->
+        <property name="serviceName" value="ServiceB"/>
+        <!--服务占用的端口-->
+        <property name="registryPort" value="1212"/>
+        <property name="servicePort" value="1212"/>
+        <!--要发布成服务的类-->
+        <property name="service" ref="UserServiceImpl"/>
+    </bean>
+
+</beans>
